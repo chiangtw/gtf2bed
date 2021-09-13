@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 
 import argparse
-import io
 import gzip
 import re
 from collections import namedtuple
@@ -110,9 +109,8 @@ class Bed:
 
     @staticmethod
     def _list_to_str(list_, sep='\t', end=''):
-        with io.StringIO() as tmp:
-            print(*list_, sep=sep, end=end, file=tmp)
-            return tmp.getvalue()
+        string = sep.join(map(str, list_)) + end
+        return string
 
     @classmethod
     def get_union_regions(cls, regions):
