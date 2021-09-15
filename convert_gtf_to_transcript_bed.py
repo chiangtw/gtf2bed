@@ -173,15 +173,15 @@ class GTF:
         self._parse(self._raw_gtf_line)
 
     def _init(self):
-        self.chr_ = ""
-        self.feature = ""
+        self.chr_ = ''
+        self.feature = ''
         self.start = 0
         self.end = 0
-        self.strand = ""
+        self.strand = ''
         self.attrs = {}
 
-        self.gene_id = ""
-        self.transcript_id = ""
+        self.gene_id = ''
+        self.transcript_id = ''
 
     @classmethod
     def _parse_attrs_string(cls, attrs_string):
@@ -199,8 +199,8 @@ class GTF:
             self.strand = data[6]
             self.attrs = self._parse_attrs_string(data[8])
 
-            self.gene_id = self.attrs.get('gene_id', "")
-            self.transcript_id = self.attrs.get('transcript_id', "")
+            self.gene_id = self.attrs.get('gene_id', '')
+            self.transcript_id = self.attrs.get('transcript_id', '')
 
 
 def read_file(file_):
@@ -219,7 +219,7 @@ def read_gtf_file(gtf_file):
 
 def get_transcripts_data(gtf_file):
     for gtf in read_gtf_file(gtf_file):
-        if gtf.transcript_id != "":
+        if (gtf.transcript_id != '') and (gtf.feature != 'gene'):
             yield gtf
 
 
