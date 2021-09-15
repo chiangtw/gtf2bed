@@ -151,7 +151,7 @@ class Bed:
     @property
     def thickStart(self):
         if self._thickStart:
-            return self._thickStart
+            return self._thickStart - 1
         else:
             return self.start
 
@@ -223,7 +223,7 @@ def get_transcripts_data(gtf_file):
             yield gtf
 
 
-def convert_gtf_to_transcript_bed(gtf_file):
+def convert_gtf_to_transcript_bed(gtf_file, show_CDS=False):
     groupby_tid = groupby(
         get_transcripts_data(gtf_file),
         key=lambda gtf: gtf.transcript_id
@@ -238,20 +238,30 @@ def convert_gtf_to_transcript_bed(gtf_file):
             for exon in exons
         ]
 
-        CDSs = filter(lambda gtf: gtf.feature == 'CDS', tgp)
-        CDSs_start_end = [(CDS.start, CDS.end) for CDS in CDSs]
+        if show_CDS:
+            CDSs = filter(lambda gtf: gtf.feature == 'CDS', tgp)
+            CDSs_start_end = [(CDS.start, CDS.end) for CDS in CDSs]
 
-        if len(CDSs_start_end) > 0:
-            coding_region_start = min((CDS[0] for CDS in CDSs_start_end))
-            coding_region_end = max((CDS[1] for CDS in CDSs_start_end))
+            if len(CDSs_start_end) > 0:
+                coding_region_start = min((CDS[0] for CDS in CDSs_start_end))
+                coding_region_end = max((CDS[1] for CDS in CDSs_start_end))
 
-            bed = Bed(
-                exon_regions,
-                name=tid,
-                thickStart=coding_region_start,
-                thickEnd=coding_region_end,
-                union=True
-            )
+                bed = Bed(
+                    exon_regions,
+                    name=tid,
+                    thickStart=coding_region_start,
+                    thickEnd=coding_region_end,
+                    union=True
+                )
+            else:
+                bed = Bed(
+                    exon_regions,
+                    name=tid,
+                    thickStart=-1,
+                    thickEnd=-1,
+                    union=True
+                )
+
         else:
             bed = Bed(exon_regions, name=tid, union=True)
 
@@ -264,6 +274,7 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('gtf_file')
     parser.add_argument('-o', '--out_bed_file', type=argparse.FileType('w'))
+    parser.add_argument('-CDS', '--show-CDS-region', action="store_true")
 
     return parser
 
@@ -273,7 +284,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        results = convert_gtf_to_transcript_bed(args.gtf_file)
+        results = convert_gtf_to_transcript_bed(
+            args.gtf_file,
+            show_CDS=args.show_CDS_region
+        )
 
         for line in results:
             print(line, file=args.out_bed_file)
