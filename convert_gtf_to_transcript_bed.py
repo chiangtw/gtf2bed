@@ -25,9 +25,11 @@ class Bed:
     )
     _region = namedtuple('Region', ('start', 'end'))
 
-    def __init__(self, regions, name='.', union=False):
+    def __init__(self, regions, name='.', thickStart=None, thickEnd=None, union=False):
         self.regions = regions
         self.name = name
+        self._thickStart = thickStart
+        self._thickEnd = thickEnd
         self.union = union
 
         if not self.union:
@@ -92,8 +94,8 @@ class Bed:
 
         if all_fields:
             fields += [
-                self.start,
-                self.end,
+                self.thickStart,
+                self.thickEnd,
                 0,
                 self.block_count,
                 self._list_to_str(self.block_sizes, sep=','),
@@ -145,6 +147,20 @@ class Bed:
         union_regions = tuple((chr_, start, end, strand)
                               for start, end in union_regions)
         return union_regions
+
+    @property
+    def thickStart(self):
+        if self._thickStart:
+            return self._thickStart
+        else:
+            return self.start
+
+    @property
+    def thickEnd(self):
+        if self._thickEnd:
+            return self._thickEnd
+        else:
+            return self.end
 
 
 class GTF:
@@ -221,7 +237,24 @@ def convert_gtf_to_transcript_bed(gtf_file):
             (exon.chr_, exon.start, exon.end, exon.strand)
             for exon in exons
         ]
-        bed = Bed(exon_regions, name=tid)
+
+        CDSs = filter(lambda gtf: gtf.feature == 'CDS', tgp)
+        CDSs_start_end = [(CDS.start, CDS.end) for CDS in CDSs]
+
+        if len(CDSs_start_end) > 0:
+            coding_region_start = min((CDS[0] for CDS in CDSs_start_end))
+            coding_region_end = max((CDS[1] for CDS in CDSs_start_end))
+
+            bed = Bed(
+                exon_regions,
+                name=tid,
+                thickStart=coding_region_start,
+                thickEnd=coding_region_end,
+                union=True
+            )
+        else:
+            bed = Bed(exon_regions, name=tid, union=True)
+
         bed_text = bed.to_string(all_fields=True)
 
         yield bed_text
