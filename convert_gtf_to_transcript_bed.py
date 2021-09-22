@@ -25,12 +25,15 @@ class Bed:
     )
     _region = namedtuple('Region', ('start', 'end'))
 
-    def __init__(self, regions, name='.', thickStart=None, thickEnd=None, union=False):
+    def __init__(self, regions, union=False,
+                 name='.', score=0, thickStart=None, thickEnd=None):
         self.regions = regions
+        self.union = union
+
         self.name = name
+        self.score = score
         self._thickStart = thickStart
         self._thickEnd = thickEnd
-        self.union = union
 
         if not self.union:
             self.regions = self.reverse_regions_if_minus_strand(self.regions)
@@ -88,7 +91,7 @@ class Bed:
             self.start,
             self.end,
             self.name,
-            '.',
+            self.score,
             self.strand
         ]
 
@@ -151,16 +154,16 @@ class Bed:
     @property
     def thickStart(self):
         if self._thickStart:
-            return self._thickStart - 1
+            return self._thickStart
         else:
-            return self.start
+            return 0
 
     @property
     def thickEnd(self):
         if self._thickEnd:
             return self._thickEnd
         else:
-            return self.end
+            return 0
 
 
 class GTF:
@@ -243,24 +246,22 @@ def convert_gtf_to_transcript_bed(gtf_file, show_CDS=False):
             CDSs_start_end = [(CDS.start, CDS.end) for CDS in CDSs]
 
             if len(CDSs_start_end) > 0:
-                coding_region_start = min((CDS[0] for CDS in CDSs_start_end))
-                coding_region_end = max((CDS[1] for CDS in CDSs_start_end))
-
-                bed = Bed(
-                    exon_regions,
-                    name=tid,
-                    thickStart=coding_region_start,
-                    thickEnd=coding_region_end,
-                    union=True
-                )
+                # coding transcript
+                coding_region_start = min(CDS[0] for CDS in CDSs_start_end) - 1
+                coding_region_end = max(CDS[1] for CDS in CDSs_start_end)
             else:
-                bed = Bed(
-                    exon_regions,
-                    name=tid,
-                    thickStart=-1,
-                    thickEnd=-1,
-                    union=True
-                )
+                # non-coding transcript
+                exon_regions_start = min(region[1] for region in exon_regions) - 1
+                coding_region_start = exon_regions_start
+                coding_region_end = exon_regions_start
+                
+            bed = Bed(
+                exon_regions,
+                name=tid,
+                thickStart=coding_region_start,
+                thickEnd=coding_region_end,
+                union=True
+            )
 
         else:
             bed = Bed(exon_regions, name=tid, union=True)
